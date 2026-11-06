@@ -1,0 +1,10 @@
+*.bak
+/dfc
+coverage.*
+*.yaml
+.idea
+.DS_Store
+mcp-server/mcp-server
+
+# Prevent GoReleaser causing a +dirty suffix on --version
+./dist

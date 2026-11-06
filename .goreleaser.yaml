@@ -1,0 +1,80 @@
+project_name: dfc
+version: 2
+
+before:
+  hooks:
+    - go mod download
+
+env:
+  - COSIGN_YES=true
+
+builds:
+- id: dfc-build
+  binary: dfc
+  main: ./
+  env:
+  - CGO_ENABLED=0
+  goos:
+    - darwin
+    - linux
+  goarch:
+    - "386"
+    - amd64
+    - arm64
+  ignore:
+    - goos: darwin
+      goarch: "386"
+  flags:
+    - -trimpath
+  mod_timestamp: '{{ .CommitTimestamp }}'
+  ldflags:
+    - -extldflags "-static"
+
+signs:
+  - id: dfc-cosign
+    cmd: cosign
+    certificate: "${artifact}.crt"
+    args: ["sign-blob", "--output-signature", "${signature}", "--output-certificate", "${certificate}", "${artifact}", "--yes"]
+    artifacts: all
+
+archives:
+- files:
+    - LICENSE
+  wrap_in_directory: true
+
+brews:
+  - name: dfc
+    repository:
+      owner: chainguard-dev
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    url_template: "https://github.com/chainguard-dev/dfc/releases/download/v{{ .Version }}/{{ .ArtifactName }}"
+    directory: Formula
+    commit_author:
+      name: guardian
+      email: guardian@chainguard.dev
+    homepage: "https://github.com/chainguard-dev/dfc"
+    description: "Convert Dockerfiles to use Chainguard"
+    install: |
+      bin.install "{{ .Binary }}" => "{{ .ProjectName }}"
+    test: |
+      system "#{bin}/{{ .ProjectName }}", "--version"
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+
+release:
+  draft: false
+  prerelease: false
+  name_template: "Release {{ .Tag }}"
